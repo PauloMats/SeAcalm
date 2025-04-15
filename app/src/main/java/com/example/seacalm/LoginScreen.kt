@@ -169,14 +169,22 @@ fun LoginScreen(
                                         popUpTo("login") { inclusive = true }
                                     }
                                 } else {
-                                    errorMessage = "Incorrect email or password"
+                                    errorMessage = when (val exception = authRepository.lastError) {
+                                        is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> {
+                                            if (exception.errorCode == "ERROR_INVALID_EMAIL") {
+                                                "Invalid email address"
+                                            } else {
+                                                "Incorrect email or password"
+                                            }
+                                        }
+                                        else -> "Login failed. Please try again."
+                                    }
                                 }
                             }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors =
-                ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
+                colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
             ) {
                 Text("Login")
             }
@@ -207,10 +215,7 @@ fun LoginScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = contentColor,
-                    contentColor = backgroundColor
-                )
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor)
             ) {
                 Text("Sign in with Google")
             }

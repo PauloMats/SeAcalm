@@ -171,7 +171,11 @@ class AuthRepository(context: Context, private val firestore: FirebaseFirestore)
     fun getCurrentUser() = firebaseAuth.currentUser
 
     fun signOut() {
+        signOutGoogle()
         firebaseAuth.signOut()
+        _authState.value = false
+        _currentUserProfile.value = null
+
     }
 
     private fun createUserProfile(userProfile: UserProfile): StateFlow<Boolean> {
@@ -208,4 +212,21 @@ class AuthRepository(context: Context, private val firestore: FirebaseFirestore)
             }
         return result
     }
+    fun updateUserProfile(userProfile: UserProfile): StateFlow<Boolean> {
+        val result = MutableStateFlow(false)
+        firestore.collection("users")
+            .document(userProfile.userId)
+            .set(userProfile, com.google.firebase.firestore.SetOptions.merge()) // Use merge to allow partial updates
+            .addOnSuccessListener {
+                result.value = true
+                _currentUserProfile.value = userProfile // Update the stored profile
+            }
+            .addOnFailureListener {
+                // Handle failure, e.g., log the error
+                result.value = false
+            }
+        return result
+    }
+
+
 }
