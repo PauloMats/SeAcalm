@@ -9,54 +9,63 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
-@Composable fun LoginScreen(navController: NavController, authRepository: AuthRepository, themeViewModel: ThemeViewModel = viewModel()) {
-   var email by remember { mutableStateOf("") }
+@Composable
+fun LoginScreen(
+    navController: NavController,
+    authRepository: AuthRepository,
+    themeViewModel: ThemeViewModel
+) {
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val selectedTheme by themeViewModel.theme.collectAsState()
-    
-    val backgroundColor = if (selectedTheme == "dark") Color(0xFF191970) else Color.White // Navy blue for dark
-    val contentColor = if (selectedTheme == "dark") Color.White else Color(0xFF4169E1) // Shades of blue for dark, blue for light
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val selectedTheme by themeViewModel.theme.collectAsState(initial = "light")
+
+    val backgroundColor = if (selectedTheme == "dark") Color(0xFF191970) else Color.White
+    val contentColor = if (selectedTheme == "dark") Color.White else Color(0xFF4169E1)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(color = backgroundColor)
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // TODO: App Logo
         Text(
-            text = "Sea", // Placeholder
+            text = "Sea",
             style = MaterialTheme.typography.headlineLarge,
             color = contentColor
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Theme Selection
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            //TODO: implement radio buttons or similar
             Button(onClick = { themeViewModel.updateTheme("light") }) {
-                Text("Light Theme", color = if (selectedTheme == "light") Color.White else contentColor)
+                Text(
+                    "Light Theme",
+                    color = if (selectedTheme == "light") Color.White else contentColor
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = { themeViewModel.updateTheme("dark") })  {
-               Text("Dark Theme", color = if (selectedTheme == "dark") Color.White else contentColor)
+            Button(onClick = { themeViewModel.updateTheme("dark") }) {
+                Text(
+                    "Dark Theme",
+                    color = if (selectedTheme == "dark") Color.White else contentColor
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
             value = email,
             onValueChange = { email = it },
             label = { Text("Email", color = contentColor) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = contentColor, unfocusedBorderColor = contentColor, cursorColor = contentColor, focusedLabelColor = contentColor, unfocusedLabelColor = contentColor, textColor = contentColor)
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = contentColor, unfocusedBorderColor = contentColor, cursorColor = contentColor, focusedLabelColor = contentColor, unfocusedLabelColor = contentColor, textColor = contentColor)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -66,8 +75,7 @@ import androidx.navigation.NavController
             onValueChange = { password = it },
             label = { Text("Password", color = contentColor) },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = contentColor, unfocusedBorderColor = contentColor, cursorColor = contentColor, focusedLabelColor = contentColor, unfocusedLabelColor = contentColor, textColor = contentColor)
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = contentColor, unfocusedBorderColor = contentColor, cursorColor = contentColor, focusedLabelColor = contentColor, unfocusedLabelColor = contentColor, textColor = contentColor)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -78,43 +86,40 @@ import androidx.navigation.NavController
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        val authState by authRepository.authState.collectAsState(initial = false)
-    LaunchedEffect(authState) {
-        if (authState) {
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true }
-            }
-        } else {
-            // Handle login failure, e.g., show an error message
-        }
-    }
-       
         Button(
-            onClick = { 
-                authRepository.signInWithEmailAndPassword(email, password) { success ->
-                    if (success) {
-                        navController.navigate("home") { // Assuming "home" is the route for HomeScreen
-                            popUpTo("login") { inclusive = true }
-                        }
-                    } else {
-                        errorMessage = "Invalid email or password."
-                    }
-                }
+            onClick = {
+                authRepository.signInWithEmailAndPassword(email, password)
             },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
+            colors =
+            ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
         ) {
             Text("Login")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedButton(
-            onClick = { navController.navigate("register") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor)
-        ) {
-            Text("Register")
+        errorMessage?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
+
+        val authState by authRepository.authState.collectAsState(initial = AuthState.SignedOut)
+        LaunchedEffect(authState) {
+            when (authState) {
+                AuthState.SignedIn -> {
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+                is AuthState.Failed -> errorMessage = (authState as AuthState.Failed).message
+                AuthState.SignedOut -> {}
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -125,17 +130,23 @@ import androidx.navigation.NavController
            modifier = Modifier.fillMaxWidth(),
            colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
        ) {
-           Text("Sign in with Google")
+           Text("Sign in with Google (Not implemented yet)")
        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = { navController.navigate("register") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor)
+        ) {
+            Text("Register")
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
-    // Note: This preview won't work correctly without providing NavController and AuthRepository
-    // It's mainly for checking the layout.
-    val navController = rememberNavController()
-    val authRepository = AuthRepository()
-    LoginScreen(navController, authRepository)
+    LoginScreen(rememberNavController(), AuthRepository(), ThemeViewModel())
 }

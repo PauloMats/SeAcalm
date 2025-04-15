@@ -49,7 +49,15 @@ fun RegisterScreen(
             onValueChange = { email = it },
             label = { Text("Email", color = contentColor) },
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = contentColor, unfocusedBorderColor = contentColor, cursorColor = contentColor, focusedLabelColor = contentColor, unfocusedLabelColor = contentColor, textColor = contentColor)
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = contentColor,
+                unfocusedBorderColor = contentColor,
+                cursorColor = contentColor,
+                focusedLabelColor = contentColor,
+                unfocusedLabelColor = contentColor,
+                focusedTextColor = contentColor,
+                unfocusedTextColor = contentColor
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -60,7 +68,15 @@ fun RegisterScreen(
             label = { Text("Password", color = contentColor) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = contentColor, unfocusedBorderColor = contentColor, cursorColor = contentColor, focusedLabelColor = contentColor, unfocusedLabelColor = contentColor, textColor = contentColor)
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = contentColor,
+                unfocusedBorderColor = contentColor,
+                cursorColor = contentColor,
+                focusedLabelColor = contentColor,
+                unfocusedLabelColor = contentColor,
+                focusedTextColor = contentColor,
+                unfocusedTextColor = contentColor
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -71,7 +87,15 @@ fun RegisterScreen(
             label = { Text("Confirm Password", color = contentColor) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = contentColor, unfocusedBorderColor = contentColor, cursorColor = contentColor, focusedLabelColor = contentColor, unfocusedLabelColor = contentColor, textColor = contentColor)
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = contentColor,
+                unfocusedBorderColor = contentColor,
+                cursorColor = contentColor,
+                focusedLabelColor = contentColor,
+                unfocusedLabelColor = contentColor,
+                focusedTextColor = contentColor,
+                unfocusedTextColor = contentColor
+            )
         )
 
         Spacer(modifier = Modifier.height(32.dp))
