@@ -9,13 +9,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 
-@Composable
-fun LoginScreen() {
-    var email by remember { mutableStateOf("") }
+@Composable fun LoginScreen(navController: NavController, authRepository: AuthRepository, themeViewModel: ThemeViewModel = viewModel()) {
+   var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var selectedTheme by remember { mutableStateOf("light") } // "light" or "dark"
-
+    val selectedTheme by themeViewModel.theme.collectAsState()
+    
     val backgroundColor = if (selectedTheme == "dark") Color(0xFF191970) else Color.White // Navy blue for dark
     val contentColor = if (selectedTheme == "dark") Color.White else Color(0xFF4169E1) // Shades of blue for dark, blue for light
 
@@ -39,12 +40,12 @@ fun LoginScreen() {
         // Theme Selection
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             //TODO: implement radio buttons or similar
-            Button(onClick = { selectedTheme = "light" }) {
+            Button(onClick = { themeViewModel.updateTheme("light") }) {
                 Text("Light Theme", color = if (selectedTheme == "light") Color.White else contentColor)
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = { selectedTheme = "dark" }) {
-                Text("Dark Theme", color = if (selectedTheme == "dark") Color.White else contentColor)
+            Button(onClick = { themeViewModel.updateTheme("dark") })  {
+               Text("Dark Theme", color = if (selectedTheme == "dark") Color.White else contentColor)
             }
         }
 
@@ -77,8 +78,29 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        val authState by authRepository.authState.collectAsState(initial = false)
+    LaunchedEffect(authState) {
+        if (authState) {
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true }
+            }
+        } else {
+            // Handle login failure, e.g., show an error message
+        }
+    }
+       
         Button(
-            onClick = { /* TODO: Implement Login */ },
+            onClick = { 
+                authRepository.signInWithEmailAndPassword(email, password) { success ->
+                    if (success) {
+                        navController.navigate("home") { // Assuming "home" is the route for HomeScreen
+                            popUpTo("login") { inclusive = true }
+                        }
+                    } else {
+                        errorMessage = "Invalid email or password."
+                    }
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
         ) {
@@ -88,7 +110,7 @@ fun LoginScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedButton(
-            onClick = { /* TODO: Implement Register */ },
+            onClick = { navController.navigate("register") },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor)
         ) {
@@ -98,18 +120,22 @@ fun LoginScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         // TODO: Implement Google Sign-In
-        Button(
-            onClick = { /* TODO: Implement Google Sign-In */ },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
-        ) {
-            Text("Sign in with Google")
-        }
+       Button(
+           onClick = { /* TODO: Implement Google Sign-In */ },
+           modifier = Modifier.fillMaxWidth(),
+           colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
+       ) {
+           Text("Sign in with Google")
+       }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen()
+    // Note: This preview won't work correctly without providing NavController and AuthRepository
+    // It's mainly for checking the layout.
+    val navController = rememberNavController()
+    val authRepository = AuthRepository()
+    LoginScreen(navController, authRepository)
 }
