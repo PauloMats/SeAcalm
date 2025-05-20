@@ -2,12 +2,14 @@ package com.example.seacalm
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,7 +21,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val authRepository = AuthRepository()
+            val authRepository = AuthRepository(applicationContext)
             val themeViewModel: ThemeViewModel = viewModel()
             val authState by authRepository.authState.collectAsState()
             val navController = rememberNavController()
@@ -60,14 +62,28 @@ class MainActivity : ComponentActivity() {
                     composable("emergency") {
                         EmergencyScreen()
                     }
-                    composable("profile") { ProfileScreen() }
-                    composable("history") { HistoryScreen() }
-                    composable("chat") { ChatScreen() }
-                    composable("emergency") { EmergencyScreen() }
-                    composable("professional") { ProfessionalScreen() }
-                    composable("premium") { PremiumScreen() }
+                    composable("profile") {
+                        ProfileScreen(navController = navController)
+                    }
+                    composable("history") {
+                        HistoryScreen()
+                    }
+                    composable("professional") {
+                        ProfessionalScreen()
+                    }
+                    composable("premium") {
+                        PremiumScreen()
+                    }
                 }
             }
         }
     }
 }
+
+// Placeholder composables for new routes
+@Composable
+fun HistoryScreen() { Text(text = "History Screen") }
+@Composable
+fun ProfessionalScreen() { Text(text = "Professional Screen") }
+@Composable
+fun PremiumScreen() { Text(text = "Premium Screen") }
