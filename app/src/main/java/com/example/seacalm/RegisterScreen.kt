@@ -10,10 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.rememberNavController
-import kotlinx.coroutines.flow.collectLatest
+import androidx.navigation.NavController
 import java.util.regex.Pattern
 
 
@@ -21,23 +21,22 @@ import java.util.regex.Pattern
 fun RegisterScreen(
     navController: NavController,
     themeViewModel: ThemeViewModel = viewModel(),
-    authRepository: AuthRepository = remember { AuthRepository() }
+    authViewModel: AuthViewModel = viewModel() // Get AuthViewModel using viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password  by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-    var registrationError by remember { mutableStateOf<String?>(null) }
+
     val selectedTheme by themeViewModel.theme.collectAsState()
+    val authState by authViewModel.authState.collectAsState()
+    val errorMessage by authViewModel.errorMessage.collectAsState()
+    val isLoading by authViewModel.loading.collectAsState()
+
     val backgroundColor = if (selectedTheme == "dark") Color(0xFF191970) else Color.White // Navy blue for dark
     val contentColor = if (selectedTheme == "dark") Color.White else Color(0xFF4169E1) // Shades of blue for dark, blue for light
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = contentColor)
@@ -68,12 +67,27 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+    LaunchedEffect(authState) {
+        if (authState) {
+            navController.navigate("home") { popUpTo("login") { inclusive = true } }
+        }
+    }
+
             val emailPattern = remember {
                 Pattern.compile("[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+")
             }
 
             OutlinedTextField(
                 value = email,
+                onValueChange = {
+                    email = it
+                    authViewModel.clearErrorMessage() // Clear error when typing
+                },
+                value = email,
+                onValueChange = {
+                    email = it
+                    authViewModel.clearErrorMessage()
+                },
                 isError = emailError != null,
                 supportingText = {
                     if (emailError != null) {
@@ -81,7 +95,6 @@ fun RegisterScreen(
                     }
                 },
                 trailingIcon = {  },
-                onValueChange = { email = it },
                 label = { Text("Email", color = contentColor) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -106,10 +119,10 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
-                isError = passwordError != null,
-                supportingText = { if (passwordError != null) Text(passwordError!!, color = Color.Red) },
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    authViewModel.clearErrorMessage() },
                 label = { Text("Password", color = contentColor) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -120,6 +133,14 @@ fun RegisterScreen(
                     focusedLabelColor = contentColor,
                     unfocusedLabelColor = contentColor,
                     focusedTextColor = contentColor,
+                },
+                 isError = !authViewModel.passwordError.collectAsState().value.isNullOrEmpty(),
+                supportingText = {
+                    if (!authViewModel.passwordError.collectAsState().value.isNullOrEmpty()) {
+                        Text(
+                            authViewModel.passwordError.collectAsState().value!!,
+                            color = MaterialTheme.colorScheme.error)
+                    }
                     unfocusedTextColor = contentColor
                 ),
                 onValueChange = {
@@ -135,8 +156,10 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
-                isError = confirmPasswordError != null,
                 value = confirmPassword,
+                onValueChange = { confirmPassword = it
+                    authViewModel.clearErrorMessage()
+                },
                 onValueChange = { confirmPassword = it },
                 label = { Text("Confirm Password", color = contentColor) },
                 visualTransformation = PasswordVisualTransformation(),
@@ -148,10 +171,18 @@ fun RegisterScreen(
                     focusedLabelColor = contentColor,
                     unfocusedLabelColor = contentColor,
                     focusedTextColor = contentColor,
+                ),
+                isError = !authViewModel.confirmPasswordError.collectAsState().value.isNullOrEmpty(),
+                supportingText = {
+                    if (!authViewModel.confirmPasswordError.collectAsState().value.isNullOrEmpty()) {
+                        Text(
+                            authViewModel.confirmPasswordError.collectAsState().value!!,
+                            color = MaterialTheme.colorScheme.error)
+                    }
                     unfocusedTextColor = contentColor
                 ),
                 supportingText = {
-                    if (confirmPasswordError != null) {
+                    if (!authViewModel.confirmPasswordError.collectAsState().value.isNullOrEmpty()) {
                         Text(confirmPasswordError!!, color = Color.Red)
                     }
                 },
@@ -167,23 +198,26 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            LaunchedEffect(Unit) {
-                authRepository.authState.collectLatest { isAuthenticated ->
-                    authRepository.hasAttemptedAuth = false
-                    if (isAuthenticated) {
-                        navController.navigate("home") { popUpTo("login") { inclusive = true } }
-                    } else if (authRepository.hasAttemptedAuth) {
-                        registrationError = "Registration failed. Please try again."
-                    }
-                }
-            }
-
-            if (registrationError != null) {
-                Text(registrationError!!, color = Color.Red)
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
             }
 
             Button(
                 onClick = {
+                   authViewModel.registerWithEmailAndPassword(email, password, confirmPassword)
+                },
+                 enabled = !isLoading, // Disable button when loading
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
+            ) {
+                 if (isLoading) {
+                    CircularProgressIndicator(color = contentColor) // Show loading indicator
+                } else {
+                    Text("Register")
                     if (emailError == null && passwordError == null && confirmPasswordError == null && email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank()) {
                         authRepository.registerWithEmailAndPassword(email, password)
                         authRepository.hasAttemptedAuth = true
@@ -191,16 +225,13 @@ fun RegisterScreen(
                 },
                 enabled = emailError == null && passwordError == null && confirmPasswordError == null && email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
+                colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor),
+                enabled = !isLoading
             ) {
+
                 Text("Register")
             }
         }
     }
 }
-
 @Preview(showBackground = true)
-@Composable
-fun RegisterScreenPreview(){
-    RegisterScreen(navController = rememberNavController())
-}

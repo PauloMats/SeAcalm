@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 
 @Composable
@@ -17,6 +18,8 @@ fun ForgotPasswordScreen(navController: NavController, themeViewModel: ThemeView
     var email by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     val selectedTheme by themeViewModel.theme.collectAsState()
+    val authViewModel: AuthViewModel = viewModel()
+    val errorMessage by authViewModel.errorMessage.collectAsState()
 
     val backgroundColor = if (selectedTheme == "dark") Color(0xFF191970) else Color.White // Navy blue for dark
     val contentColor = if (selectedTheme == "dark") Color.White else Color(0xFF4169E1) // Shades of blue for dark, blue for light
@@ -34,6 +37,10 @@ fun ForgotPasswordScreen(navController: NavController, themeViewModel: ThemeView
             style = MaterialTheme.typography.headlineLarge,
             color = contentColor
         )
+
+        LaunchedEffect(errorMessage) {
+            message = errorMessage
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -56,18 +63,8 @@ fun ForgotPasswordScreen(navController: NavController, themeViewModel: ThemeView
 
         Button(
             onClick = {
-                if (email.isNotBlank()) {
-                    val authRepository = AuthRepository()
-                    authRepository.sendPasswordResetEmail(email).let { result ->
-                        if (result.value) {
-                            message = "If an account with that email exists, a reset email has been sent."
-                        } else {
-                            message = "Failed to send reset email. Please check the email address."
-                        }
-                    }
-                } else {
-                    message = "Please enter your email address."
-                }
+                authViewModel.sendPasswordResetEmail(email)
+                message = "If an account with that email exists, a reset email has been sent." // Optimistic message
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = contentColor, contentColor = backgroundColor)
